@@ -1,0 +1,58 @@
+---
+- hosts: all
+
+  pre_tasks:
+     - name: Update apt cache if needed.
+       apt: update_cache=yes cache_valid_time=3600
+    
+     - name: Touch containerd.conf file, but dont change times this makes the task idempotent
+       file:
+         path: /etc/modules-load.d/containerd.conf
+         state: touch
+         mode: u+rw,g+r,o+r
+         modification_time: preserve
+         access_time: preserve 
+     
+     - name: Insert/Update configuration block in /etc/modules-load.d/containerd.conf
+       blockinfile:
+         path: /etc/modules-load.d/containerd.conf
+         block: |
+           overlay
+           br_netfilter
+
+     - name: Add the overlay module
+       modprobe:
+         name: overlay
+         state: present
+
+     - name: Add the br_netfilter module
+       modprobe:
+         name: br_netfilter
+         state: present
+     
+     - name: Set ip forwarding on in /proc and in the sysctl file and reload if necessary
+       sysctl:
+         name: net.bridge.bridge-nf-call-iptables
+         value: '1'
+         sysctl_set: yes
+         state: present
+         reload: yes
+
+     - name: Set ip forwarding on in /proc and in the sysctl file and reload if necessary
+       sysctl:
+         name: net.ipv4.ip_forward
+         value: '1'
+         sysctl_set: yes
+         state: present
+         reload: yes
+
+     - name: Set ip forwarding on in /proc and in the sysctl file and reload if necessary
+       sysctl:
+         name: net.bridge.bridge-nf-call-ip6tables
+         value: '1'
+         sysctl_set: yes
+         state: present
+         reload: yes
+
+  roles:
+    - geerlingguy.containerd
